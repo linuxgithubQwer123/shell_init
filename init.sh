@@ -14,7 +14,7 @@ SYS7RELEASE=$(cat /etc/centos-release  | grep -o "7.")
 YUM6URL="/etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-6.repo"
 EPEL6URL="/etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-6.repo"
 YUM7URL="/etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo"
-EPEL7URL="wget -O /etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-7.repo"
+EPEL7URL="/etc/yum.repos.d/epel.repo http://mirrors.aliyun.com/repo/epel-7.repo"
 
 
 #STREAMLINEENV
@@ -39,7 +39,7 @@ SELINUXPATH="/etc/sysconfig/selinux"
 
 #REMOTEENV
 SSHCONFIGPATH="/etc/ssh/sshd_config"
-SSHPORT="27898"
+SSHPORT="$RANDOM"
 SSHIP=$(ifconfig | awk 'NR==2{print }' | awk '{print $2}' | cut -d: -f2)
 
 #DATETIMEENV
@@ -81,6 +81,12 @@ LOGTIME="date +%H:%M:%S"
 #function traplock {
 #	trap 'rm -f $LOCKFILEPATH/$LOCKFILE' INT
 #}
+
+
+function first {
+yum install wget vim &>/dev/null -y
+}
+first
 
 function usage {
 	echo "Usage $0 {1|2|3|4|5|6|7}"
@@ -194,6 +200,7 @@ fi
 
 
 function remote {
+	yum install openssh-clients openssh-server -y &>/dev/null
 	sed -i "s/#\?ListenAddress.*/ListenAddress ${SSHIP}/" $SSHCONFIGPATH
 	sed -i "s/#\?Port.*/Port ${SSHPORT}/" $SSHCONFIGPATH
 	sed -i "s/#\?UseDNS.*/UseDNS no/" $SSHCONFIGPATH 
@@ -229,14 +236,16 @@ DATETIMEARG1="$1"
 }
 
 function autodatetime {
-	ntpdate $TIMESERVER
+	yum install ntp -y &>/dev/null
 	echo "*/5 * * * * /usr/bin/ntpdate $TIMESERVER >/dev/null 2>&1" > /var/spool/cron/"$SYNCTIMEU"
-	logfile "[datetime]Datetime sync success"
+	ntpdate $TIMESERVER
+	[ $? -eq 0 ] && logfile "[datetime]Datetime sync success"
 }
 
-function compile {
-	yum groupinstall "Development tools" &>/dev/null && \
-	logfile "[compile]development tools install success" || logfile "[compile]development tools install error"
+function complie {
+	yum install gcc-c++ gcc make -y &>/dev/null && \
+	[ $? -eq 0 ] && \
+	logfile "[compile]gcc tools install success" || logfile "[compile]gcc tools install error"
 }
 
 function limit {
@@ -245,6 +254,7 @@ function limit {
 }
 
 function kernel {
+
 cat >> $INITFILE << EOF
 ####################################################
 net.ipv4.tcp_max_syn_backlog = 65536
@@ -265,6 +275,8 @@ net.ipv4.ip_local_port_range = 1024 65535
 ####################################################
 EOF
 sysctl -p
+logfile "[kernel]kernel success"
+
 }
 
 
@@ -337,11 +349,11 @@ MAINARG2="$2"
 		;;
 	10)
 		if [[ $2 != "" ]];then
+			autodatetime
 			repo
 			streamline
 			fs
 			remote
-			autodatetime
 			hostn $MAINARG2
 			complie
 			limit
