@@ -35,7 +35,7 @@ NetworkManager
 
 
 #FIREWALL SELINUXENV
-SELINUXPATH="/etc/sysconfig/selinux"
+SELINUXPATH="/etc/selinux/config"
 
 #REMOTEENV
 SSHCONFIGPATH="/etc/ssh/sshd_config"
