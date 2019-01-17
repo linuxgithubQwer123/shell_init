@@ -254,7 +254,9 @@ function limit {
 }
 
 function kernel {
-
+FLAG="net.ipv4.tcp_max_syn_backlog"
+KERNELFILE="/etc/sysctl.conf"
+if ! grep "$FLAG" $KERNELFILE &>/dev/null; then
 cat >> $INITFILE << EOF
 ####################################################
 net.ipv4.tcp_max_syn_backlog = 65536
@@ -276,7 +278,7 @@ net.ipv4.ip_local_port_range = 1024 65535
 EOF
 sysctl -p
 logfile "[kernel]kernel success"
-
+fi
 }
 
 
