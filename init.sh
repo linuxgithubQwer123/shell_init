@@ -240,6 +240,7 @@ function autodatetime {
 	echo "*/5 * * * * /usr/bin/ntpdate $TIMESERVER >/dev/null 2>&1" > /var/spool/cron/"$SYNCTIMEU"
 	ntpdate $TIMESERVER
 	[ $? -eq 0 ] && logfile "[datetime]Datetime sync success"
+	install /usr/share/zoneinfo/Asia/Shanghai  /etc/localtime
 }
 
 function complie {
