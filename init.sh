@@ -46,7 +46,7 @@ SSHIP=$(ifconfig | awk 'NR==2{print }' | awk '{print $2}' | cut -d: -f2)
 TIMEZONESRC="/usr/share/zoneinfo/Asia/Shanghai"
 TIMEZONEDST="/etc/localtime "
 SYNCTIMEU="root"
-TIMESERVER="1.centos.pool.ntp.org"
+TIMESERVER="ntp1.aliyun.com"
 
 
 #COMPILEENV
@@ -83,10 +83,28 @@ LOGTIME="date +%H:%M:%S"
 #}
 
 
-function first {
-yum install wget vim &>/dev/null -y
+function depend_software {
+SOFTWARE=(
+"wget"
+"vim-enhanced"
+"net-tools"
+)
+for SOFTNAME in ${SOFTWARE[*]}; do
+	if ! rpm -q ${SOFTNAME} &>/dev/null; then
+		yum install $SOFTNAME -y &>/dev/null
+		if [ $? -eq 0 ]; then
+			logfile "[depend_software]install ${SOFTNAME} success"  
+		else
+			logfile "[depend_software]install ${SOFTNAME} errors"
+			exit 1
+		fi  
+	else
+			logfile "[depend_software] already instgall ${SOFTNAME} "
+	fi
+done
 }
-first
+
+
 
 function usage {
 	echo "Usage $0 {1|2|3|4|5|6|7}"
@@ -121,18 +139,18 @@ LOGINFO=$*
 
 
 function init {
-
-if [  "$USERNAME" -gt 0 ]; then
-        echo "Please sitwch to root user" && logfile "[init]This is not root user"
+if [ "$USERNAME" -eq 0 ]; then
+	logfile "[init]Is root user success"
+else
+	logfile "[init]This is not root user"
         exit 1
 fi
-	logfile "[init]Is root user success"
 }
 
 
 function repo {
 if ! ping -c 2 www.baidu.com &>/dev/null ; then
-        echo "Please connection internet" && logfile "[init]connection internet error"
+        echo "Please connection internet" &&  logfile "[init]connection internet error"
         exit 1
 fi
 
@@ -202,7 +220,7 @@ fi
 function remote {
 	yum install openssh-clients openssh-server -y &>/dev/null
 	sed -i "s/#\?ListenAddress.*/ListenAddress ${SSHIP}/" $SSHCONFIGPATH
-	sed -i "s/#\?Port.*/Port ${SSHPORT}/" $SSHCONFIGPATH
+	#sed -i "s/#\?Port.*/Port ${SSHPORT}/" $SSHCONFIGPATH
 	sed -i "s/#\?UseDNS.*/UseDNS no/" $SSHCONFIGPATH 
 	sed -i "s/GSSAPIAuthentication.*/GSSAPIAuthentication no/" $SSHCONFIGPATH
 	sed -i "s/#\?MaxAuthTries.*/MaxAuthTries 3/" $SSHCONFIGPATH
@@ -237,7 +255,7 @@ DATETIMEARG1="$1"
 
 function autodatetime {
 	yum install ntp -y &>/dev/null
-	echo "*/5 * * * * /usr/bin/ntpdate $TIMESERVER >/dev/null 2>&1" > /var/spool/cron/"$SYNCTIMEU"
+	#echo "*/5 * * * * /usr/bin/ntpdate $TIMESERVER >/dev/null 2>&1" > /var/spool/cron/"$SYNCTIMEU"
 	ntpdate $TIMESERVER
 	[ $? -eq 0 ] && logfile "[datetime]Datetime sync success"
 	install /usr/share/zoneinfo/Asia/Shanghai  /etc/localtime
@@ -322,6 +340,7 @@ function main {
 MAINARG1="$1"
 MAINARG2="$2"
 	init
+	depend_software
 	case $MAINARG1  in
 	1)
 		repo
@@ -356,7 +375,7 @@ MAINARG2="$2"
 			repo
 			streamline
 			fs
-			remote
+			#remote
 			hostn $MAINARG2
 			complie
 			limit
